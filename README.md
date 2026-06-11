@@ -59,4 +59,4 @@ Binaries are published as GitHub Releases. Each release includes:
 
 ## License
 
-All Rights Reserved.
+Apache 2.0
