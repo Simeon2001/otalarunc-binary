@@ -66,11 +66,38 @@ install_system_deps() {
     case "$DISTRO" in
         debian|ubuntu|pop|elementary|linuxmint|neon)
             apt-get update -qq
+            # passt is only in default repos from Ubuntu 22.04+ / Debian 12+
+            # For older Ubuntu (20.04), add the passt PPA
+            if [ "$DISTRO" = "ubuntu" ]; then
+                UBUNTU_VER=$(grep VERSION_ID /etc/os-release | cut -d'"' -f2 | cut -d'.' -f1)
+                if [ "$UBUNTU_VER" -lt 22 ] 2>/dev/null; then
+                    warn "Ubuntu $UBUNTU_VER detected. Adding PPA for passt..."
+                    apt-get install -y -qq software-properties-common
+                    add-apt-repository -y ppa:passt/passt
+                    apt-get update -qq
+                elif [ "$UBUNTU_VER" -lt 20 ]; then
+                    error "Ubuntu $UBUNTU_VER is too old. Minimum supported version is 20.04."
+                fi
+            fi
             apt-get install -y -qq \
                 shadow-utils passt libseccomp2 \
                 iptables iproute2 procps
             ;;
-        fedora|rhel|centos)
+        fedora|rhel|centos|ol)
+            # Enable EPEL (needed for passt on RHEL/OL/CentOS 9)
+            if ! rpm -q epel-release &>/dev/null; then
+                RHEL_VER=$(rpm -E %rhel)
+                if [ "$DISTRO" = "rhel" ]; then
+                    # RHEL requires optional repos enabled via subscription-manager first
+                    subscription-manager repos \
+                        --enable "codeready-builder-for-rhel-${RHEL_VER}-$(uname -m)-rpms" 2>/dev/null || \
+                        warn "Could not enable CodeReady Builder repo (may not be subscribed). Continuing..."
+                fi
+                dnf install -y \
+                    "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${RHEL_VER}.noarch.rpm" || \
+                    dnf install -y epel-release || \
+                    warn "Could not install EPEL. passt may not be available."
+            fi
             dnf install -y \
                 shadow-utils passt libseccomp \
                 iptables iproute procps-ng
