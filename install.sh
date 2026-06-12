@@ -80,23 +80,29 @@ install_system_deps() {
                 fi
             fi
             apt-get install -y -qq \
-                shadow-utils passt libseccomp2 \
+                passwd passt libseccomp2 \
                 iptables iproute2 procps
             ;;
         fedora|rhel|centos|ol)
             # Enable EPEL (needed for passt on RHEL/OL/CentOS 9)
             if ! rpm -q epel-release &>/dev/null; then
                 RHEL_VER=$(rpm -E %rhel)
-                if [ "$DISTRO" = "rhel" ]; then
-                    # RHEL requires optional repos enabled via subscription-manager first
-                    subscription-manager repos \
-                        --enable "codeready-builder-for-rhel-${RHEL_VER}-$(uname -m)-rpms" 2>/dev/null || \
-                        warn "Could not enable CodeReady Builder repo (may not be subscribed). Continuing..."
-                fi
-                dnf install -y \
-                    "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${RHEL_VER}.noarch.rpm" || \
+                if [ "$DISTRO" = "ol" ]; then
+                    # Oracle Linux has its own EPEL mirror — much faster on OCI
+                    dnf install -y oracle-epel-release-el${RHEL_VER} || \
                     dnf install -y epel-release || \
                     warn "Could not install EPEL. passt may not be available."
+                elif [ "$DISTRO" = "rhel" ]; then
+                    subscription-manager repos \
+                        --enable "codeready-builder-for-rhel-${RHEL_VER}-$(uname -m)-rpms" 2>/dev/null || \
+                        warn "Could not enable CodeReady Builder repo. Continuing..."
+                    dnf install -y \
+                        "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${RHEL_VER}.noarch.rpm" || \
+                        warn "Could not install EPEL. passt may not be available."
+                else
+                    dnf install -y epel-release || \
+                    warn "Could not install EPEL. passt may not be available."
+                fi
             fi
             dnf install -y \
                 shadow-utils passt libseccomp \
