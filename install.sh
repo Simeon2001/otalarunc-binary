@@ -108,7 +108,7 @@ install_system_deps() {
                 shadow-utils passt libseccomp \
                 iptables iproute procps-ng
             ;;
-        arch|manjaro|endeavouros)
+        arch|manjaro|endeavouros|garuda)
             pacman -Sy --noconfirm \
                 shadow passt libseccomp \
                 iptables iproute2 procps-ng
