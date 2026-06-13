@@ -337,7 +337,7 @@ install_or_update_pasta() {
 
         local TMP_DIR
         TMP_DIR=$(mktemp -d)
-        trap 'rm -rf "$TMP_DIR"' EXIT
+        trap 'rm -rf "${TMP_DIR:-/tmp/unknown}"' EXIT
 
         case "$DISTRO" in
             debian|ubuntu|pop|elementary|linuxmint|neon)
@@ -354,7 +354,7 @@ install_or_update_pasta() {
                 ;;
         esac
 
-        git clone --depth 1 https://github.com/containers/passt.git "$TMP_DIR/passt"
+        GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://passt.top/passt "$TMP_DIR/passt"
         make -C "$TMP_DIR/passt" --silent
         make -C "$TMP_DIR/passt" install
         info "pasta $(pasta --version 2>&1 | head -1) built and installed from source."
