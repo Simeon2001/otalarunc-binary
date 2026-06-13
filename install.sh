@@ -324,6 +324,45 @@ verify_install() {
     fi
 }
 
+install_or_update_pasta() {
+    step "Checking pasta version..."
+
+    local INSTALLED_VERSION=""
+    if command -v pasta &>/dev/null; then
+        INSTALLED_VERSION=$(pasta --version 2>&1 | head -1 | awk '{print $2}')
+    fi
+
+    if [ -z "${INSTALLED_VERSION}" ] || [ "${INSTALLED_VERSION}" = "unknown" ]; then
+        warn "pasta is missing or too old. Building from source..."
+
+        local TMP_DIR
+        TMP_DIR=$(mktemp -d)
+        trap 'rm -rf "$TMP_DIR"' EXIT
+
+        case "$DISTRO" in
+            debian|ubuntu|pop|elementary|linuxmint|neon)
+                apt-get install -y -qq git make gcc libssl-dev
+                ;;
+            fedora|rhel|centos|ol)
+                dnf install -y git make gcc openssl-devel
+                ;;
+            arch|manjaro|endeavouros|garuda)
+                pacman -Sy --noconfirm git make gcc openssl
+                ;;
+            suse|opensuse*)
+                zypper install -y git make gcc libopenssl-devel
+                ;;
+        esac
+
+        git clone --depth 1 https://github.com/containers/passt.git "$TMP_DIR/passt"
+        make -C "$TMP_DIR/passt" --silent
+        make -C "$TMP_DIR/passt" install
+        info "pasta $(pasta --version 2>&1 | head -1) built and installed from source."
+    else
+        info "pasta version: $INSTALLED_VERSION"
+    fi
+}
+
 main() {
     echo ""
     echo "========================================"
@@ -336,6 +375,7 @@ main() {
     detect_arch
     detect_distro
     install_system_deps
+    install_or_update_pasta
     fetch_latest_version
     download_binary
     install_binary
